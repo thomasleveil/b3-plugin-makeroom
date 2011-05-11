@@ -1,0 +1,13 @@
+<configuration plugin="makeroom">
+
+    <settings name="global_settings">
+        <!-- level under which players to kick will be chosen from (default: 2) -->
+        <set name="non_member_level">2</set>
+    </settings>
+
+    <settings name="commands">
+        <!-- Command to free a slot -->
+        <set name="makeroom-mr">20</set>
+    </settings>
+	
+</configuration>
