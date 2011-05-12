@@ -18,11 +18,15 @@
 #
 # Changelog:
 #
-__version__ = '1.0'
+# 2011-05-12 - 1.1
+# * messages can be customized in the plugin config file
+#
+__version__ = '1.1'
 __author__  = 'Courgette'
 
 import time, string
 from b3.plugin import Plugin
+from b3.config import ConfigParser
 
 class MakeroomPlugin(Plugin):
     """
@@ -66,6 +70,9 @@ class MakeroomPlugin(Plugin):
             self._non_member_level = 2
         self.info('non member level : %s' % self._non_member_level)
 
+        # load messages
+        
+
 
     def onEvent(self, event):
         pass
@@ -81,12 +88,11 @@ class MakeroomPlugin(Plugin):
         """\
         free a slot
         """
-        if client is None: return
-
         clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
         clientToKick = None
         if len(clients) == 0:
-            client.message('No non-member found to kick !')
+            if client:
+                client.message('No non-member found to kick !')
         else:
             # sort players by group and connection time
             clientsByGroup = sorted(clients, key=lambda x:x.maxLevel)
@@ -97,9 +103,18 @@ class MakeroomPlugin(Plugin):
             clientsByTime = sorted(lowestClients, key=lambda x:x.timeAdd, reverse=True)
             #self.debug([(x.name, x.timeAdd) for x in clientsByTime])
             client2kick = clientsByTime[0]
-            self.console.say("kicking %s to free a slot" %client2kick.name)
+            try:
+                kick_message = self.getMessage('kick_message', self.console.getMessageVariables(client=client2kick))
+            except ConfigParser.NoOptionError:
+                kick_message = "kicking %s to free a slot" % client2kick.name
+            self.console.say(kick_message)
             time.sleep(1.5)
-            client2kick.kick(reason="to make room for a server member", keyword="makeroom", silent=True, data={"requestedby": client})
+            try:
+                kick_reason = self.getMessage('kick_reason', self.console.getMessageVariables(client=client2kick))
+            except ConfigParser.NoOptionError:
+                kick_reason = "to free a slot"
+            client2kick.kick(reason=kick_reason, keyword="makeroom", silent=True, data={"requestedby": client})
+
 
 if __name__ == '__main__':
 
@@ -121,6 +136,16 @@ if __name__ == '__main__':
                 <set name="makeroom-mr">20</set>
             </settings>
 
+            <settings name="messages">
+                <!-- You can use the following keywords in your messages :
+                    $clientname
+                    $clientguid
+                -->
+                <!-- kick_message will be displayed to all players when a player is kicked to free a slot -->
+                <set name="kick_messaged">kicking $clientname to free a slot</set>
+                <!-- kick_reason will be displayed to the player to be kicked -->
+                <set name="kick_reasond">to make room for a server member</set>
+            </settings>
         </configuration>
     """)
     p = MakeroomPlugin(fakeConsole, conf1)
@@ -159,5 +184,63 @@ if __name__ == '__main__':
         moderator.connects(0)
         moderator.says('!makeroom')
 
-    testPlugin5()
+    def testMessage1():
+        conf = XmlConfigParser()
+        conf.loadFromString("""
+            <configuration plugin="makeroom">
+    
+                <settings name="global_settings">
+                    <!-- level under which players to kick will be chosen from (default: 2) -->
+                    <set name="non_member_level">2</set>
+                </settings>
+    
+                <settings name="commands">
+                    <!-- Command to free a slot -->
+                    <set name="makeroom-mr">20</set>
+                </settings>
+
+            </configuration>
+        """)
+        p = MakeroomPlugin(fakeConsole, conf)
+        p.onStartup()
+        jack = FakeClient(fakeConsole, name="Jack", guid="qsd654sqf", _maxLevel=0)
+        jack.connects(1)
+        p.cmd_makeroom()
+
+    def testMessage2():
+        conf = XmlConfigParser()
+        conf.loadFromString("""
+            <configuration plugin="makeroom">
+    
+                <settings name="global_settings">
+                    <!-- level under which players to kick will be chosen from (default: 2) -->
+                    <set name="non_member_level">2</set>
+                </settings>
+    
+                <settings name="commands">
+                    <!-- Command to free a slot -->
+                    <set name="makeroom-mr">20</set>
+                </settings>
+    
+                <settings name="messages">
+                    <!-- You can use the following keywords in your messages :
+                        $clientname
+                    -->
+                    <!-- kick_message will be displayed to all players when a player is kicked to free a slot -->
+                    <set name="kick_message">kicking $clientname to make room for a member xxxxxxxxxx</set>
+                    <!-- kick_reason will be displayed to the player to be kicked -->
+                    <set name="kick_reason">to free a slot ! mlkjmlkj</set>
+                </settings>
+            </configuration>
+        """)
+        p = MakeroomPlugin(fakeConsole, conf)
+        p.onStartup()
+        jack = FakeClient(fakeConsole, name="Jack", guid="qsd654sqf", _maxLevel=0)
+        jack.connects(1)
+        p.cmd_makeroom()
+        
+        
+        
+    #testPlugin5()
+    testMessage2()
     time.sleep(2)

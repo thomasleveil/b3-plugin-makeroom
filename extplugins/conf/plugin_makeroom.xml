@@ -9,5 +9,13 @@
         <!-- Command to free a slot -->
         <set name="makeroom-mr">20</set>
     </settings>
-	
+    <settings name="messages">
+        <!-- You can use the following keywords in your messages :
+            $clientname
+        -->
+        <!-- kick_message will be displayed to all players when a player is kicked to free a slot -->
+        <set name="kick_message">kicking $clientname to free a slot</set>
+        <!-- kick_reason will be displayed to the player to be kicked -->
+        <set name="kick_reason">to make room for a server member</set>
+    </settings>
 </configuration>
