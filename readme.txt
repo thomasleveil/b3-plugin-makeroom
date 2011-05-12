@@ -27,6 +27,13 @@ Installation
 <plugin name="makeroom" config="@b3/extplugins/conf/plugin_makeroom.xml"/>
 
 
+Changelog
+---------
+
+2011-05-12 - 1.1 : messages can be customized in the plugin config file
+
+
+
 Support
 -------
 
