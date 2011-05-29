@@ -20,8 +20,10 @@
 #
 # 2011-05-12 - 1.1
 # * messages can be customized in the plugin config file
+# 2011-05-29 - 1.1.1
+# * fix saving the kick into database
 #
-__version__ = '1.1'
+__version__ = '1.1.1'
 __author__  = 'Courgette'
 
 import time, string
@@ -113,7 +115,7 @@ class MakeroomPlugin(Plugin):
                 kick_reason = self.getMessage('kick_reason', self.console.getMessageVariables(client=client2kick))
             except ConfigParser.NoOptionError:
                 kick_reason = "to free a slot"
-            client2kick.kick(reason=kick_reason, keyword="makeroom", silent=True, data={"requestedby": client})
+            client2kick.kick(reason=kick_reason, keyword="makeroom", silent=True, admin=client)
 
 
 if __name__ == '__main__':
@@ -205,7 +207,8 @@ if __name__ == '__main__':
         p.onStartup()
         jack = FakeClient(fakeConsole, name="Jack", guid="qsd654sqf", _maxLevel=0)
         jack.connects(1)
-        p.cmd_makeroom()
+        moderator.connects(2)
+        moderator.says('!makeroom')
 
     def testMessage2():
         conf = XmlConfigParser()
@@ -237,8 +240,8 @@ if __name__ == '__main__':
         p.onStartup()
         jack = FakeClient(fakeConsole, name="Jack", guid="qsd654sqf", _maxLevel=0)
         jack.connects(1)
-        p.cmd_makeroom()
-        
+        moderator.connects(2)
+        moderator.says('!makeroom')
         
         
     #testPlugin5()
