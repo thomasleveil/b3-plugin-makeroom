@@ -3,6 +3,10 @@
     <settings name="global_settings">
         <!-- level under which players to kick will be chosen from (default: 2) -->
         <set name="non_member_level">2</set>
+        <!-- delay in seconds between the time the info_message is shown and the kick happens.
+        If you set this to 0, then no info_message will be shown and kick will happen
+        instantly -->
+        <set name="delay">5</set>
     </settings>
 
     <settings name="commands">
@@ -17,5 +21,7 @@
         <set name="kick_message">kicking $clientname to free a slot</set>
         <!-- kick_reason will be displayed to the player to be kicked -->
         <set name="kick_reason">to make room for a server member</set>
+        <!-- info_message will be displayed to all before a player get kicked -->
+        <set name="info_message">Making room for clan member, please come back again</set>
     </settings>
 </configuration>

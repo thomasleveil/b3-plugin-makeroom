@@ -32,6 +32,7 @@ Changelog
 
 2011-05-12 - 1.1 : messages can be customized in the plugin config file
 2011-05-29 - 1.1.1 : fix saving the kick into database
+2011-06-08 - 1.2 : add info message and delay between info message and actual kick
 
 
 Support

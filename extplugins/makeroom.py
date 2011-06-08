@@ -22,13 +22,17 @@
 # * messages can be customized in the plugin config file
 # 2011-05-29 - 1.1.1
 # * fix saving the kick into database
+# 2011-06-08 - 1.2
+# * add info message and delay between info message and actual kick
 #
-__version__ = '1.1.1'
+__version__ = '1.2'
 __author__  = 'Courgette'
 
-import time, string
-from b3.plugin import Plugin
 from b3.config import ConfigParser
+from b3.plugin import Plugin
+import time
+import string
+import threading
 
 class MakeroomPlugin(Plugin):
     """
@@ -72,8 +76,12 @@ class MakeroomPlugin(Plugin):
             self._non_member_level = 2
         self.info('non member level : %s' % self._non_member_level)
 
-        # load messages
-        
+        try:
+            self._delay = self.config.getfloat('global_settings', 'delay')
+        except:
+            self._delay = 5.0
+        self.info('delay before kick: %s seconds' % self._delay)
+
 
 
     def onEvent(self, event):
@@ -90,6 +98,24 @@ class MakeroomPlugin(Plugin):
         """\
         free a slot
         """
+        clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
+        clientToKick = None
+        if len(clients) == 0:
+            if client:
+                client.message('No non-member found to kick !')
+        else:
+            if self._delay == 0:
+                self._free_a_slot(client)
+            else:
+                try:
+                    info_message = self.getMessage('info_message', self.console.getMessageVariables(client=client))
+                except ConfigParser.NoOptionError:
+                    info_message = "Making room for clan member, please come back again"
+                self.console.say(info_message)
+                threading.Timer(self._delay, self._free_a_slot, (client, )).start()
+
+
+    def _free_a_slot(self, client):
         clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
         clientToKick = None
         if len(clients) == 0:
@@ -117,7 +143,6 @@ class MakeroomPlugin(Plugin):
                 kick_reason = "to free a slot"
             client2kick.kick(reason=kick_reason, keyword="makeroom", silent=True, admin=client)
 
-
 if __name__ == '__main__':
 
     from b3.fake import fakeConsole, moderator
@@ -131,6 +156,10 @@ if __name__ == '__main__':
             <settings name="global_settings">
                 <!-- level under which players to kick will be chosen from (default: 2) -->
                 <set name="non_member_level">2</set>
+                <!-- delay in seconds between the time the info_message is shown and the kick happens.
+                If you set this to 0, then no info_message will be shown and kick will happen
+                instantly -->
+                <set name="delay">1</set>
             </settings>
 
             <settings name="commands">
@@ -147,6 +176,8 @@ if __name__ == '__main__':
                 <set name="kick_messaged">kicking $clientname to free a slot</set>
                 <!-- kick_reason will be displayed to the player to be kicked -->
                 <set name="kick_reasond">to make room for a server member</set>
+                <!-- info_message will be displayed to all before a player get kicked -->
+                <set name="info_message">Making ROOM !!!!!</set>
             </settings>
         </configuration>
     """)
@@ -218,6 +249,10 @@ if __name__ == '__main__':
                 <settings name="global_settings">
                     <!-- level under which players to kick will be chosen from (default: 2) -->
                     <set name="non_member_level">2</set>
+                    <!-- delay in seconds between the time the info_message is shown and the kick happens.
+                    If you set this to 0, then no info_message will be shown and kick will happen
+                    instantly -->
+                    <set name="delay">0</set>
                 </settings>
     
                 <settings name="commands">
@@ -244,6 +279,7 @@ if __name__ == '__main__':
         moderator.says('!makeroom')
         
         
+    testPlugin3()
     #testPlugin5()
-    testMessage2()
-    time.sleep(2)
+    #testMessage2()
+    time.sleep(30)
