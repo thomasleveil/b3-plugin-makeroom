@@ -24,12 +24,16 @@
 # * fix saving the kick into database
 # 2011-06-08 - 1.2
 # * add info message and delay between info message and actual kick
+# 2011-06-20 - 1.3
+# * add an automation feature to keep some free slot
 #
-__version__ = '1.2'
+__version__ = '1.3'
+from ConfigParser import NoOptionError
 __author__  = 'Courgette'
 
 from b3.config import ConfigParser
 from b3.plugin import Plugin
+from b3.events import EVT_CLIENT_CONNECT
 import time
 import string
 import threading
@@ -41,11 +45,10 @@ class MakeroomPlugin(Plugin):
     """
     _adminPlugin = None
     _non_member_level = None
-
-
-    def onStartup(self):
-        pass
-
+    _automation_enabled = None #None if not installed, False if installed but disabled
+    _total_slots = None
+    _min_free_slots = None
+    
 
     def onLoadConfig(self):
         # get the admin plugin
@@ -82,10 +85,65 @@ class MakeroomPlugin(Plugin):
             self._delay = 5.0
         self.info('delay before kick: %s seconds' % self._delay)
 
+        if not self.config.has_section('automation'):
+            self.uninstall_automation()
+        else:
+            self.loadConfigAutomation()
+            
+            
+    def loadConfigAutomation(self):
+        try:
+            self._automation_enabled = self.config.getboolean('automation', 'enabled')
+        except NoOptionError:
+            self._automation_enabled = False
+        except ValueError, err:
+            self.warning("bad value for setting automation/enabled. Expected 'yes' or 'no'. %s", err)
+            self._automation_enabled = False
+        self.info('automation enabled : %s' % self._automation_enabled)
+
+        try:
+            self._total_slots = self.config.getint('automation', 'total_slots')
+            self.info('automation/total_slots : %s' % self._total_slots)
+        except (NoOptionError, ValueError), err:
+            self.warning("No value or bad value for automation/total_slots. %s", err)
+            self.uninstall_automation()
+        else:
+            if self._total_slots < 2:
+                self.warning("automation/total_slots cannot be less than 2")
+                self.uninstall_automation()
+                return
+            try:
+                self._min_free_slots = self.config.getint('automation', 'min_free_slots')
+                self.info('automation/min_free_slots : %s' % self._min_free_slots)
+            except (NoOptionError, ValueError), err:
+                self.warning("No value or bad value for automation/min_free_slots. %s", err)
+                self.uninstall_automation()
+            if self._min_free_slots < 0:
+                self.warning("automation/min_free_slots cannot be less than 0")
+                self.uninstall_automation()
+            if self._min_free_slots >= self._total_slots:
+                self.warning("automation/min_free_slots must be less than automation/total_slots")
+                self.uninstall_automation()
+                
+
+    def uninstall_automation(self):
+        self._automation_enabled = None
+        # remove !makeroomauto command
+        if self._adminPlugin._commands.has_key('makeroomauto'):
+            self._adminPlugin._commands.pop('makeroomauto')
+        self.warning("Could not set up automation")
+            
+
+    def onStartup(self):
+        if self._automation_enabled is not None:
+            self.registerEvent(EVT_CLIENT_CONNECT)
 
 
     def onEvent(self, event):
-        pass
+        if event.type == EVT_CLIENT_CONNECT:
+            if self._automation_enabled:
+                self.check_free_slots(event.client)
+                
 
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
@@ -93,6 +151,22 @@ class MakeroomPlugin(Plugin):
             func = getattr(self, cmd)
             return func
 
+
+    def cmd_makeroomauto(self, data=None, client=None, cmd=None):
+        """\
+        <on/off> - enable or disable automation
+        """
+        if not client:
+            return
+        if not data or data.lower() not in ('on', 'off'):
+            client.message('^7expecting \'on\' or \'off\'')
+            return
+        self._automation_enabled = data.lower() == 'on'
+        if self._automation_enabled:
+            client.message("Makeroom automation is ON")
+        else:
+            client.message("Makeroom automation is OFF")
+      
 
     def cmd_makeroom(self, data=None, client=None, cmd=None):
         """\
@@ -143,6 +217,26 @@ class MakeroomPlugin(Plugin):
                 kick_reason = "to free a slot"
             client2kick.kick(reason=kick_reason, keyword="makeroom", silent=True, admin=client)
 
+
+    def check_free_slots(self, last_connected_client):
+        nb_players = len(self.console.clients.getList())
+        nb_free_slots = self._total_slots - nb_players
+        self.debug("%s/%s connected players. Free slots : %s", nb_players, self._total_slots, nb_free_slots)
+        if nb_free_slots < self._min_free_slots:
+            if last_connected_client.maxLevel < self._non_member_level:
+                self.info("last connected player will be kicked")
+                info_message = "Keeping a free slot, please come back again"
+                self.console.say(info_message)
+                kick_reason = "to free a slot"
+                if self._delay == 0:
+                    last_connected_client.kick(reason=kick_reason, keyword="makeroom", silent=True)
+                else:
+                    threading.Timer(self._delay, last_connected_client.kick, (), {'reason':kick_reason, 'keyword':"makeroom", 'silent':True}).start()
+            else:
+                self.info("someone will be kicked")
+                self.cmd_makeroom()
+
+
 if __name__ == '__main__':
 
     from b3.fake import fakeConsole, moderator
@@ -165,6 +259,8 @@ if __name__ == '__main__':
             <settings name="commands">
                 <!-- Command to free a slot -->
                 <set name="makeroom-mr">20</set>
+                <!-- Command to enable/disable automation -->
+                <set name="makeroomauto-mrauto">60</set>
             </settings>
 
             <settings name="messages">
@@ -178,6 +274,18 @@ if __name__ == '__main__':
                 <set name="kick_reasond">to make room for a server member</set>
                 <!-- info_message will be displayed to all before a player get kicked -->
                 <set name="info_message">Making ROOM !!!!!</set>
+            </settings>
+            
+            <settings name="automation">
+                <!-- enabled : yes/no
+                  If yes, then this plugin will make sure that min_free_slots are kept free
+                  and kick all connecting player until min_free_slots are free.
+                 -->
+                <set name="enabled">no</set>
+                <!-- The total number of slots on the server  -->
+                <set name="total_slots">3</set>
+                <!-- The number of slots to keep free -->
+                <set name="min_free_slots">1</set>
             </settings>
         </configuration>
     """)
@@ -279,7 +387,40 @@ if __name__ == '__main__':
         moderator.says('!makeroom')
         
         
-    testPlugin3()
+    def testAutomation1():
+        from b3.fake import superadmin
+        superadmin.connects(0)
+        superadmin.says('!makeroomauto')
+        time.sleep(1)
+        superadmin.says('!makeroomauto on')
+        superadmin.says('!makeroomauto off')
+
+    def testAutomation2():
+        from b3.fake import superadmin, joe
+        p._automation_enabled = True
+        p._delay = 3
+        p._total_slots = 2
+        p._min_free_slots = 1
+        superadmin.connects(0)
+        time.sleep(.3)
+        joe.connects(1)
+        time.sleep(.3)
+
+    def testAutomation3():
+        from b3.fake import superadmin, joe
+        p._automation_enabled = True
+        p._delay = 3
+        p._total_slots = 2
+        p._min_free_slots = 1
+        joe.connects(1)
+        time.sleep(.3)
+        superadmin.connects(0)
+        time.sleep(.3)
+        
+    #testPlugin3()
     #testPlugin5()
     #testMessage2()
+    #testAutomation1()
+    #testAutomation2()
+    testAutomation3()
     time.sleep(30)

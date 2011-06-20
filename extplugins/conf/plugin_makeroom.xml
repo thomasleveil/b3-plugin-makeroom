@@ -12,6 +12,8 @@
     <settings name="commands">
         <!-- Command to free a slot -->
         <set name="makeroom-mr">20</set>
+        <!-- Command to enable/disable automation -->
+        <set name="makeroomauto-mrauto">60</set>
     </settings>
     <settings name="messages">
         <!-- You can use the following keywords in your messages :
@@ -23,5 +25,16 @@
         <set name="kick_reason">to make room for a server member</set>
         <!-- info_message will be displayed to all before a player get kicked -->
         <set name="info_message">Making room for clan member, please come back again</set>
+    </settings>
+    <settings name="automation">
+        <!-- enabled : yes/no
+          If yes, then this plugin will make sure that min_free_slots are kept free
+          and kick all connecting player until min_free_slots are free.
+         -->
+        <set name="enabled">no</set>
+        <!-- The total number of slots on the server  -->
+        <set name="total_slots">32</set>
+        <!-- The number of slots to keep free -->
+        <set name="min_free_slots">1</set>
     </settings>
 </configuration>
