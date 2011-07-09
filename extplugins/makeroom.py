@@ -26,11 +26,14 @@
 # * add info message and delay between info message and actual kick
 # 2011-06-20 - 1.3
 # * add an automation feature to keep some free slot
+# 2011-07-09 - 1.3.1
+# * fix issue in automation mode where the last player to connect
+#   would not be kicked if his level is equals to the non_member_level 
 #
-__version__ = '1.3'
-from ConfigParser import NoOptionError
+__version__ = '1.3.1'
 __author__  = 'Courgette'
 
+from ConfigParser import NoOptionError
 from b3.config import ConfigParser
 from b3.plugin import Plugin
 from b3.events import EVT_CLIENT_CONNECT
@@ -173,6 +176,7 @@ class MakeroomPlugin(Plugin):
         free a slot
         """
         clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
+        self.debug("players subject to kick : %r", ["%s(%s)" % (x, x.maxLevel) for x in clients])
         clientToKick = None
         if len(clients) == 0:
             if client:
@@ -191,6 +195,7 @@ class MakeroomPlugin(Plugin):
 
     def _free_a_slot(self, client):
         clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
+        self.debug("players subject to kick : %r", ["%s(%s)" % (x, x.maxLevel) for x in clients])
         clientToKick = None
         if len(clients) == 0:
             if client:
@@ -223,7 +228,8 @@ class MakeroomPlugin(Plugin):
         nb_free_slots = self._total_slots - nb_players
         self.debug("%s/%s connected players. Free slots : %s", nb_players, self._total_slots, nb_free_slots)
         if nb_free_slots < self._min_free_slots:
-            if last_connected_client.maxLevel < self._non_member_level:
+            self.debug("last_connected_client.maxLevel : %s", last_connected_client.maxLevel)
+            if last_connected_client.maxLevel <= self._non_member_level:
                 self.info("last connected player will be kicked")
                 info_message = "Keeping a free slot, please come back again"
                 self.console.say(info_message)
@@ -290,6 +296,7 @@ if __name__ == '__main__':
         </configuration>
     """)
     p = MakeroomPlugin(fakeConsole, conf1)
+    p.onLoadConfig()
     p.onStartup()
 
     def testPlugin1():
@@ -355,7 +362,7 @@ if __name__ == '__main__':
             <configuration plugin="makeroom">
     
                 <settings name="global_settings">
-                    <!-- level under which players to kick will be chosen from (default: 2) -->
+                    <!-- level (inclusive) under which players to kick will be chosen from (default: 2) -->
                     <set name="non_member_level">2</set>
                     <!-- delay in seconds between the time the info_message is shown and the kick happens.
                     If you set this to 0, then no info_message will be shown and kick will happen
@@ -416,11 +423,26 @@ if __name__ == '__main__':
         time.sleep(.3)
         superadmin.connects(0)
         time.sleep(.3)
-        
+
+    def testAutomation4():
+        from b3.fake import superadmin, joe
+        p._automation_enabled = True
+        p._delay = 0
+        p._total_slots = 3
+        p._min_free_slots = 1
+        joe.connects(0)
+        time.sleep(.3)
+        superadmin.connects(1)
+        time.sleep(.3)
+        jack = FakeClient(fakeConsole, name="Jack", guid="qsd654sqf", _maxLevel=2)
+        jack.connects(2)
+
+
     #testPlugin3()
     #testPlugin5()
     #testMessage2()
     #testAutomation1()
     #testAutomation2()
-    testAutomation3()
+    #testAutomation3()
+    testAutomation4()
     time.sleep(30)

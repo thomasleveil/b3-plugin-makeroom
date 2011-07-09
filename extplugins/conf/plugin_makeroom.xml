@@ -1,7 +1,7 @@
 <configuration plugin="makeroom">
 
     <settings name="global_settings">
-        <!-- level under which players to kick will be chosen from (default: 2) -->
+        <!-- level (inclusive) under which players to kick will be chosen from (default: 2) -->
         <set name="non_member_level">2</set>
         <!-- delay in seconds between the time the info_message is shown and the kick happens.
         If you set this to 0, then no info_message will be shown and kick will happen
