@@ -32,8 +32,10 @@
 # 2011-07-11 - 1.4.0
 # * fix automated mode where any last connected player would be the one kicked
 #   whatever his level
+# 2011-07-11 - 1.4.1 
+# * just more debug messages
 #
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 __author__  = 'Courgette'
 
 from ConfigParser import NoOptionError
@@ -229,7 +231,7 @@ class MakeroomPlugin(Plugin):
     def check_free_slots(self, last_connected_client):
         nb_players = len(self.console.clients.getList())
         nb_free_slots = self._total_slots - nb_players
-        self.debug("%s/%s connected players. Free slots : %s", nb_players, self._total_slots, nb_free_slots)
+        self.debug("%s/%s connected players. Free slots : %s. %r", nb_players, self._total_slots, nb_free_slots, ["%s(%s)"%(x,x.maxLevel) for x in self.console.clients.getList()])
         if nb_free_slots < self._min_free_slots:
             self.debug("last_connected_client.maxLevel : %s", last_connected_client.maxLevel)
             if last_connected_client.maxLevel <= self._non_member_level:

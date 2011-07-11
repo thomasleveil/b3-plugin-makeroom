@@ -38,7 +38,7 @@ Changelog
     would not be kicked if his level is equals to the non_member_level 
 2011-07-11 - 1.4.0 : fix automated mode where any last connected player would be 
     the one kicked whatever his level
-
+2011-07-11 - 1.4.1 : just more debug messages
 
 Support
 -------
