@@ -36,6 +36,9 @@ Changelog
 2011-06-20 - 1.3 : add an automation feature to keep some free slot
 2011-07-09 - 1.3.1 : fix issue in automation mode where the last player to connect
     would not be kicked if his level is equals to the non_member_level 
+2011-07-11 - 1.4.0 : fix automated mode where any last connected player would be 
+    the one kicked whatever his level
+
 
 Support
 -------

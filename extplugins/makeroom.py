@@ -29,14 +29,17 @@
 # 2011-07-09 - 1.3.1
 # * fix issue in automation mode where the last player to connect
 #   would not be kicked if his level is equals to the non_member_level 
+# 2011-07-11 - 1.4.0
+# * fix automated mode where any last connected player would be the one kicked
+#   whatever his level
 #
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 __author__  = 'Courgette'
 
 from ConfigParser import NoOptionError
 from b3.config import ConfigParser
 from b3.plugin import Plugin
-from b3.events import EVT_CLIENT_CONNECT
+from b3.events import EVT_CLIENT_AUTH
 import time
 import string
 import threading
@@ -139,11 +142,11 @@ class MakeroomPlugin(Plugin):
 
     def onStartup(self):
         if self._automation_enabled is not None:
-            self.registerEvent(EVT_CLIENT_CONNECT)
+            self.registerEvent(EVT_CLIENT_AUTH)
 
 
     def onEvent(self, event):
-        if event.type == EVT_CLIENT_CONNECT:
+        if event.type == EVT_CLIENT_AUTH:
             if self._automation_enabled:
                 self.check_free_slots(event.client)
                 
