@@ -15,6 +15,7 @@ Command :
 ---------
 
 !makeroom : kick the last non-member player who entered the game
+!makeroomauto <on|off> : will makeroom every time the server gets full
 
 
 Installation
@@ -26,19 +27,6 @@ Installation
 
 <plugin name="makeroom" config="@b3/extplugins/conf/plugin_makeroom.xml"/>
 
-
-Changelog
----------
-
-2011-05-12 - 1.1 : messages can be customized in the plugin config file
-2011-05-29 - 1.1.1 : fix saving the kick into database
-2011-06-08 - 1.2 : add info message and delay between info message and actual kick
-2011-06-20 - 1.3 : add an automation feature to keep some free slot
-2011-07-09 - 1.3.1 : fix issue in automation mode where the last player to connect
-    would not be kicked if his level is equals to the non_member_level 
-2011-07-11 - 1.4.0 : fix automated mode where any last connected player would be 
-    the one kicked whatever his level
-2011-07-11 - 1.4.1 : just more debug messages
 
 Support
 -------
