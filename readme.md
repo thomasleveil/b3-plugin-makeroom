@@ -22,11 +22,11 @@ Installation
 ------------
 
  * copy makeroom.py into `b3/extplugins`
- * copy makeroom.xml into `b3/extplugins/conf`
+ * copy plugin_makeroom.ini in the same directory as your b3.xml file
  * update your main b3 config file with :
 
 ```xml
-<plugin name="makeroom" config="@b3/extplugins/conf/plugin_makeroom.xml"/>
+<plugin name="makeroom" config="@conf/plugin_makeroom.ini"/>
 ```
 
 Support

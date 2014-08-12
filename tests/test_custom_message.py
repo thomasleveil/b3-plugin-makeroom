@@ -1,41 +1,34 @@
 # -*- encoding: utf-8 -*-
-from b3.fake import fakeConsole, FakeClient, moderator
-from makeroom import MakeroomPlugin
-from b3.config import XmlConfigParser
+from textwrap import dedent
+
+import pytest
+from mock import call
+from tests import *
 
 
-conf = XmlConfigParser()
-conf.loadFromString("""
-    <configuration plugin="makeroom">
+@pytest.fixture
+def plugin(console):
+    p = plugin_maker_ini(console, dedent("""
+        [commands]
+        makeroom: 20
+        [messages]
+        kick_message: kicking $clientname to make room for a member xxxxxxxxxx
+        kick_reason: to free a slot ! mlkjmlkj
+    """))
+    p._delay = 0
+    p.console.say = Mock()
+    return p
 
-        <settings name="global_settings">
-            <!-- level under which players to kick will be chosen from (default: 2) -->
-            <set name="non_member_level">2</set>
-        </settings>
 
-        <settings name="commands">
-            <!-- Command to free a slot -->
-            <set name="makeroom-mr">20</set>
-        </settings>
+def test_custom_message(plugin, moderator, joe):
+    # GIVEN
+    moderator.connects('0')
+    joe.connects('1')
+    joe.kick = Mock()
+    # WHEN
+    moderator.says('!makeroom')
+    # THEN
+    assert [call('kicking Joe to make room for a member xxxxxxxxxx')] == plugin.console.say.mock_calls
+    assert [call(admin=moderator, reason='to free a slot ! mlkjmlkj', silent=True,
+                 keyword='makeroom')] == joe.kick.mock_calls
 
-        <settings name="messages">
-            <!-- You can use the following keywords in your messages :
-                $clientname
-            -->
-            <!-- kick_message will be displayed to all players when a player is kicked to free a slot -->
-            <set name="kick_message">kicking $clientname to make room for a member xxxxxxxxxx</set>
-            <!-- kick_reason will be displayed to the player to be kicked -->
-            <set name="kick_reason">to free a slot ! mlkjmlkj</set>
-        </settings>
-    </configuration>
-""")
-p = MakeroomPlugin(fakeConsole, conf)
-p.onLoadConfig()
-p.onStartup()
-p._delay = 0.1
-
-jack = FakeClient(fakeConsole, name="Jack", guid="qsd654sqf", _maxLevel=0)
-jack.connects(1)
-moderator.connects(2)
-
-moderator.says('!makeroom')

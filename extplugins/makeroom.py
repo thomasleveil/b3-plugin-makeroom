@@ -40,7 +40,7 @@
 #   to complete before accepting a new one
 #
 __version__ = '1.5'
-__author__  = 'Courgette'
+__author__ = 'Thomas LEVEIL'
 
 from ConfigParser import NoOptionError
 from b3.config import ConfigParser
@@ -48,19 +48,22 @@ from b3.plugin import Plugin
 from b3.events import EVT_CLIENT_AUTH
 import threading
 
+
 class MakeroomPlugin(Plugin):
     """
     This plugin provides a command to free a slot kicking the last connected player from
-    the lowest group
+    the lowest B3 group
     """
-    _adminPlugin = None
-    _non_member_level = None
-    _automation_enabled = None #None if not installed, False if installed but disabled
-    _total_slots = None
-    _min_free_slots = None
-    _delay = None
-    _kick_in_progress = threading.Lock()
-    
+
+    def __init__(self, console, config=None):
+        Plugin.__init__(self, console, config)
+        self._adminPlugin = None
+        self._non_member_level = None
+        self._automation_enabled = None  # None if not installed, False if installed but disabled
+        self._total_slots = None
+        self._min_free_slots = None
+        self._delay = None
+        self._kick_in_progress = threading.Lock()
 
     def onLoadConfig(self):
         # get the admin plugin
@@ -83,7 +86,6 @@ class MakeroomPlugin(Plugin):
                 if func:
                     self._adminPlugin.registerCommand(self, cmd, level, func, alias)
 
-
         # load non-member group level
         try:
             self._non_member_level = self.config.getint('global_settings', 'non_member_level')
@@ -101,8 +103,7 @@ class MakeroomPlugin(Plugin):
             self.uninstall_automation()
         else:
             self.loadConfigAutomation()
-            
-            
+
     def loadConfigAutomation(self):
         try:
             self._automation_enabled = self.config.getboolean('automation', 'enabled')
@@ -136,7 +137,6 @@ class MakeroomPlugin(Plugin):
             if self._min_free_slots >= self._total_slots:
                 self.warning("automation/min_free_slots must be less than automation/total_slots")
                 self.uninstall_automation()
-                
 
     def uninstall_automation(self):
         self._automation_enabled = None
@@ -144,25 +144,20 @@ class MakeroomPlugin(Plugin):
         if self._adminPlugin._commands.has_key('makeroomauto'):
             self._adminPlugin._commands.pop('makeroomauto')
         self.warning("Could not set up automation")
-            
 
     def onStartup(self):
-        if self._automation_enabled is not None:
-            self.registerEvent(EVT_CLIENT_AUTH)
-
+        self.registerEvent(EVT_CLIENT_AUTH)
 
     def onEvent(self, event):
         if event.type == EVT_CLIENT_AUTH:
             if self._automation_enabled:
                 self.check_free_slots(event.client)
                 
-
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
         if hasattr(self, cmd):
             func = getattr(self, cmd)
             return func
-
 
     def cmd_makeroomauto(self, data=None, client=None, cmd=None):
         """\
@@ -179,14 +174,12 @@ class MakeroomPlugin(Plugin):
         else:
             client.message("Makeroom automation is OFF")
       
-
     def cmd_makeroom(self, data=None, client=None, cmd=None):
         """\
         free a slot
         """
         clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
         self.debug("players subject to kick : %r", ["%s(%s)" % (x, x.maxLevel) for x in clients])
-        clientToKick = None
         if len(clients) == 0:
             if client:
                 client.message('No non-member found to kick !')
@@ -204,25 +197,23 @@ class MakeroomPlugin(Plugin):
                     self.console.say(info_message)
                     threading.Timer(self._delay, self._free_a_slot, (client, )).start()
 
-
     def _free_a_slot(self, client):
         try:
             clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
             self.debug("players subject to kick : %r", ["%s(%s)" % (x, x.maxLevel) for x in clients])
-            clientToKick = None
             if len(clients) == 0:
                 if client:
                     client.message('No non-member found to kick !')
             else:
                 # sort players by group and connection time
-                clientsByGroup = sorted(clients, key=lambda x:x.maxLevel)
-                #self.debug([(x.name, x.maxLevel) for x in clientsByGroup])
-                lowestGroup = clientsByGroup[0].maxLevel
-                lowestClients = [x for x in clientsByGroup if x.maxLevel == lowestGroup]
+                clients_by_group = sorted(clients, key=lambda x:x.maxLevel)
+                #self.debug([(x.name, x.maxLevel) for x in clients_by_group])
+                lowest_group = clients_by_group[0].maxLevel
+                lowest_clients = [x for x in clients_by_group if x.maxLevel == lowest_group]
                 #self.debug([(x.name, x.timeAdd) for x in lowestClients])
-                clientsByTime = sorted(lowestClients, key=lambda x:x.timeAdd, reverse=True)
+                clients_by_time = sorted(lowest_clients, key=lambda x:x.timeAdd, reverse=True)
                 #self.debug([(x.name, x.timeAdd) for x in clientsByTime])
-                client2kick = clientsByTime[0]
+                client2kick = clients_by_time[0]
                 try:
                     kick_message = self.getMessage('kick_message', self.console.getMessageVariables(client=client2kick))
                 except ConfigParser.NoOptionError:
@@ -254,4 +245,3 @@ class MakeroomPlugin(Plugin):
             else:
                 self.info("someone will be kicked")
                 self.cmd_makeroom()
-
