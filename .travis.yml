@@ -20,4 +20,4 @@ script: PYTHONPATH=extplugins py.test --cov=makeroom --cov-report=term-missing t
 
 after_success:
   - pip install python-coveralls
-  - coveralls debug
+  - coveralls
