@@ -2,6 +2,9 @@ makeroom plugin for BigBrotherBot [![BigBrotherBot](http://i.imgur.com/7sljo4G.p
 =================================
 
 
+[![Build Status](https://travis-ci.org/thomasleveil/b3-plugin-makeroom.svg?branch=master)](https://travis-ci.org/thomasleveil/b3-plugin-makeroom)
+
+
 Description
 -----------
 
