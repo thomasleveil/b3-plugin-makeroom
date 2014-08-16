@@ -15,4 +15,8 @@ install:
   - pip install -e ${B3_REPO} --use-mirrors
 
 # command to run tests, e.g. python setup.py test
-script: PYTHONPATH=extplugins py.test tests
+script: PYTHONPATH=extplugins py.test --cov=makeroom --cov-report=term-missing tests
+
+after_success:
+  - pip install python-coveralls
+  - coveralls
