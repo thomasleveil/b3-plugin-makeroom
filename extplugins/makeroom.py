@@ -1,3 +1,4 @@
+# coding: utf-8
 #
 # Plugin for BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2011 Courgette
@@ -16,31 +17,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-# Changelog:
-#
-# 2011-05-12 - 1.1
-# * messages can be customized in the plugin config file
-# 2011-05-29 - 1.1.1
-# * fix saving the kick into database
-# 2011-06-08 - 1.2
-# * add info message and delay between info message and actual kick
-# 2011-06-20 - 1.3
-# * add an automation feature to keep some free slot
-# 2011-07-09 - 1.3.1
-# * fix issue in automation mode where the last player to connect
-#   would not be kicked if his level is equals to the non_member_level 
-# 2011-07-11 - 1.4.0
-# * fix automated mode where any last connected player would be the one kicked
-#   whatever his level
-# 2011-07-11 - 1.4.1 
-# * just more debug messages
-# 2011-11-20 - 1.5
-# * fix config option "non_member_level" not being read
-# * only one kick action can take place at once. If there is a delay set, then wait for the first request
-#   to complete before accepting a new one
-#
-__version__ = '1.5'
-__author__ = 'Thomas LEVEIL'
+__version__ = '1.6'
+__author__ = 'Thomas LÉVEIL'
 
 from ConfigParser import NoOptionError
 from b3.config import ConfigParser
@@ -88,9 +66,11 @@ class MakeroomPlugin(Plugin):
 
         # load non-member group level
         try:
-            self._non_member_level = self.config.getint('global_settings', 'non_member_level')
-        except Exception:
-            self._non_member_level = 2
+            self._non_member_level = self.console.getGroupLevel(self.config.get('global_settings', 'non_member_level'))
+        except (NoOptionError, KeyError), err:
+            default_non_member_group = 'reg'
+            self._non_member_level = self.console.getGroupLevel(default_non_member_group)
+            self.warning("Using default value %s for 'non_member_level'. %s" % (default_non_member_group, err))
         self.info('non member level : %s' % self._non_member_level)
 
         try:

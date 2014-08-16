@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 import logging
+import os
 from mock import Mock
 from mockito import when
 import pytest
@@ -9,6 +10,10 @@ from b3.plugins.admin import AdminPlugin
 from b3.update import B3version
 from makeroom import MakeroomPlugin
 from b3 import __version__ as b3_version
+
+
+DEFAULT_PLUGIN_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '../extplugins/conf/plugin_makeroom.ini')
+
 
 class logging_disabled(object):
     """

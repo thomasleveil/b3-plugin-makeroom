@@ -1,6 +1,17 @@
 # -*- encoding: utf-8 -*-
+import os
 from textwrap import dedent
 from tests import *
+
+
+@pytest.mark.skipif(not os.path.exists(DEFAULT_PLUGIN_CONFIG_FILE), reason="Could not find default plugin config file %r" % DEFAULT_PLUGIN_CONFIG_FILE)
+def test_default_conf(console):
+    plugin = plugin_maker(console,  DEFAULT_PLUGIN_CONFIG_FILE)
+    assert 2 == plugin._non_member_level
+    assert 5.0 == plugin._delay
+    assert False is plugin._automation_enabled
+    assert 32 is plugin._total_slots
+    assert 1 is plugin._min_free_slots
 
 
 def test_empty_conf(console):
@@ -16,6 +27,14 @@ def test_non_member_level(console):
     plugin = plugin_maker_ini(console, dedent("""
         [global_settings]
         non_member_level: 20
+        """))
+    assert 20 == plugin._non_member_level
+
+
+def test_non_member_level_with_group_names(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        non_member_level: mod
         """))
     assert 20 == plugin._non_member_level
 

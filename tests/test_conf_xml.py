@@ -20,6 +20,15 @@ def test_non_member_level(console):
     assert 20 == plugin._non_member_level
 
 
+def test_non_member_level_with_group_names(console):
+    plugin = plugin_maker_xml(console, """<configuration>
+            <settings name="global_settings">
+                <set name="non_member_level">mod</set>
+            </settings>
+        </configuration>""")
+    assert 20 == plugin._non_member_level
+
+
 def test_delay(console):
     plugin = plugin_maker_xml(console, """<configuration>
             <settings name="global_settings">
