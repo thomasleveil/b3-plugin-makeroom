@@ -12,6 +12,7 @@ env:
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
   - pip install -r tests/requirements.txt --use-mirrors
+  - pip install pytest-cov
   - pip install -e ${B3_REPO} --use-mirrors
 
 # command to run tests, e.g. python setup.py test
@@ -19,4 +20,4 @@ script: PYTHONPATH=extplugins py.test --cov=makeroom --cov-report=term-missing t
 
 after_success:
   - pip install python-coveralls
-  - coveralls
+  - coveralls debug
