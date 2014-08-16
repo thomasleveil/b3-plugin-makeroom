@@ -43,7 +43,7 @@ class logging_disabled(object):
 def console():
     with logging_disabled():
         from b3.fake import FakeConsole
-        console = FakeConsole('@b3/conf/b3.distribution.xml')
+        fake_console = FakeConsole('@b3/conf/b3.distribution.xml')
 
     # load the admin plugin
     if B3version(b3_version) >= B3version("1.10dev"):
@@ -51,33 +51,33 @@ def console():
     else:
         admin_plugin_conf_file = '@b3/conf/plugin_admin.xml'
     with logging_disabled():
-        admin_plugin = AdminPlugin(console, admin_plugin_conf_file)
+        admin_plugin = AdminPlugin(fake_console, admin_plugin_conf_file)
         admin_plugin._commands = {}  # work around known bug in the Admin plugin which makes the _command property shared between all instances
         admin_plugin.onStartup()
 
     # make sure the admin plugin obtained by other plugins is our admin plugin
-    when(console).getPlugin('admin').thenReturn(admin_plugin)
+    when(fake_console).getPlugin('admin').thenReturn(admin_plugin)
 
-    return console
+    return fake_console
 
 
-def plugin_maker(console, conf):
-    p = MakeroomPlugin(console, conf)
+def plugin_maker(console_obj, conf):
+    p = MakeroomPlugin(console_obj, conf)
     p.onLoadConfig()
     p.onStartup()
     return p
 
 
-def plugin_maker_xml(console, conf_content):
+def plugin_maker_xml(console_obj, conf_content):
     conf = XmlConfigParser()
     conf.loadFromString(conf_content)
-    return plugin_maker(console, conf)
+    return plugin_maker(console_obj, conf)
 
 
-def plugin_maker_ini(console, conf_content):
+def plugin_maker_ini(console_obj, conf_content):
     conf = CfgConfigParser()
     conf.loadFromString(conf_content)
-    return plugin_maker(console, conf)
+    return plugin_maker(console_obj, conf)
 
 
 @pytest.fixture
