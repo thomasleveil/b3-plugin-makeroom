@@ -53,7 +53,15 @@ def test_automation_missing_enabled(console):
         total_slots: 5
         min_free_slots: 1
         """))
-    assert False is plugin._automation_enabled
+    assert None is plugin._automation_enabled
+
+
+def test_automation_junk_enabled(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [automation]
+        enabled: f00
+        """))
+    assert None is plugin._automation_enabled
 
 
 def test_automation_off(console):
@@ -94,6 +102,36 @@ def test_automation_min_free_slots(console):
         min_free_slots: 3
         """))
     assert 3 == plugin._min_free_slots
+
+
+def test_automation_min_free_slots_junk(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [automation]
+        enabled: yes
+        total_slots: 6
+        min_free_slots: f00
+        """))
+    assert None is plugin._automation_enabled
+
+
+def test_automation_min_free_slots_negative(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [automation]
+        enabled: yes
+        total_slots: 6
+        min_free_slots: -5
+        """))
+    assert None is plugin._automation_enabled
+
+
+def test_automation_min_free_slots_higher_than_total_slots(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [automation]
+        enabled: yes
+        total_slots: 6
+        min_free_slots: 7
+        """))
+    assert None is plugin._automation_enabled
 
 
 def test_automation_total_slots_cannot_be_less_than_2(console):

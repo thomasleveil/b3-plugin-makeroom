@@ -88,15 +88,15 @@ class MakeroomPlugin(Plugin):
         try:
             self._automation_enabled = self.config.getboolean('automation', 'enabled')
         except NoOptionError:
-            self._automation_enabled = False
+            self._automation_enabled = None
         except ValueError, err:
             self.warning("bad value for setting automation/enabled. Expected 'yes' or 'no'. %s", err)
-            self._automation_enabled = False
-        self.info('automation enabled : %s' % self._automation_enabled)
+            self._automation_enabled = None
+        self.info('automation enabled: %s' % ('yes' if self._automation_enabled else 'no'))
 
         try:
             self._total_slots = self.config.getint('automation', 'total_slots')
-            self.info('automation/total_slots : %s' % self._total_slots)
+            self.info('automation/total_slots: %s' % self._total_slots)
         except (NoOptionError, ValueError), err:
             self.warning("No value or bad value for automation/total_slots. %s", err)
             self.uninstall_automation()
@@ -107,16 +107,17 @@ class MakeroomPlugin(Plugin):
                 return
             try:
                 self._min_free_slots = self.config.getint('automation', 'min_free_slots')
-                self.info('automation/min_free_slots : %s' % self._min_free_slots)
+                self.info('automation/min_free_slots: %s' % self._min_free_slots)
             except (NoOptionError, ValueError), err:
                 self.warning("No value or bad value for automation/min_free_slots. %s", err)
                 self.uninstall_automation()
-            if self._min_free_slots < 0:
-                self.warning("automation/min_free_slots cannot be less than 0")
-                self.uninstall_automation()
-            if self._min_free_slots >= self._total_slots:
-                self.warning("automation/min_free_slots must be less than automation/total_slots")
-                self.uninstall_automation()
+            else:
+                if self._min_free_slots < 0:
+                    self.warning("automation/min_free_slots cannot be less than 0")
+                    self.uninstall_automation()
+                if self._min_free_slots >= self._total_slots:
+                    self.warning("automation/min_free_slots must be less than automation/total_slots")
+                    self.uninstall_automation()
 
     def uninstall_automation(self):
         self._automation_enabled = None

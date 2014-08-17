@@ -45,7 +45,7 @@ def test_automation_missing_enabled(console):
                 <set name="min_free_slots">1</set>
             </settings>
         </configuration>""")
-    assert False is plugin._automation_enabled
+    assert None is plugin._automation_enabled
 
 
 def test_automation_off(console):
