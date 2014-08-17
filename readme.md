@@ -41,6 +41,10 @@ http://forum.bigbrotherbot.net/plugins-by-courgette/makeroom-plugin/
 Changelog
 ---------
 
+### 1.7 - 2014-08-17
+ - add new config file option `retain_free_duration` to retain a freed slot for a while. Any non-member joining the
+   server will be kicked unless a member joined or the duration expires
+
 ### 1.6 - 2014-08-17
  - config file option `non_member_level` accepts B3 group keywords additionally to B3 group levels
    

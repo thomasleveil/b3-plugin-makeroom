@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+from textwrap import dedent
 import time
 from tests import *
 import pytest
@@ -9,27 +10,29 @@ t = int(time.time())
 
 @pytest.fixture
 def plugin(console):
-    p = plugin_maker_xml(console, """
-        <configuration>
-            <settings name="global_settings">
-                <!-- level (inclusive) under which players to kick will be chosen from (default: 2) -->
-                <set name="non_member_level">2</set>
-                <!-- delay in seconds between the time the info_message is shown and the kick happens.
-                If you set this to 0, then no info_message will be shown and kick will happen
-                instantly -->
-                <set name="delay">0</set>
-            </settings>
-            <settings name="commands">
-                <set name="makeroom-mr">20</set>
-            </settings>
-        </configuration>
-    """)
+    p = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        non_member_level: 2
+        delay: 0
+        [commands]
+        makeroom-mr: 20
+    """))
     return p
 
 
 def test_no_player_to_kick(plugin, superadmin):
     # GIVEN
     superadmin.connects(0)
+    # WHEN
+    superadmin.says('!makeroom')
+    # THEN
+    assert ['No non-member found to kick !'] == superadmin.message_history
+
+
+def test_no_non_member_to_kick(plugin, superadmin, moderator):
+    # GIVEN
+    superadmin.connects(0)
+    moderator.connects(1)
     # WHEN
     superadmin.says('!makeroom')
     # THEN
@@ -45,6 +48,7 @@ def test_one_player_to_kick(plugin, superadmin, joe):
     superadmin.says('!makeroom')
     # THEN
     assert 1 == joe.kick.call_count
+    assert ['Joe was kicked to free a slot'] == superadmin.message_history
 
 
 def test_kick_last_connected_player(plugin, superadmin, joe, jack):
@@ -61,22 +65,35 @@ def test_kick_last_connected_player(plugin, superadmin, joe, jack):
     # THEN
     assert 0 == joe.kick.call_count
     assert 1 == jack.kick.call_count
+    assert ['Jack was kicked to free a slot'] == superadmin.message_history
 
 
-def test_kick_player_of_lowest_B3_group(plugin, superadmin, joe, jack):
+def test_kick_player_of_lowest_B3_group(plugin, superadmin, joe, moderator):
     # GIVEN
     superadmin.connects(0)
     joe.connects(1)
     joe.timeAdd = t
     joe.kick = Mock()
-    jack.connects(2)
-    jack.timeAdd = t + 1
-    jack.kick = Mock()
-    superadmin.says('!putgroup jack reg')
+    moderator.connects(2)
+    moderator.timeAdd = t + 1
+    moderator.kick = Mock()
     # WHEN
     superadmin.says('!makeroom')
     # THEN
     assert 1 == joe.kick.call_count
-    assert 0 == jack.kick.call_count
+    assert 0 == moderator.kick.call_count
+    assert ['Joe was kicked to free a slot'] == superadmin.message_history
 
 
+def test_makeroom_called_during_retain_free_slot_duration(plugin, superadmin, joe):
+    # GIVEN
+    plugin._retain_free_duration = 5
+    superadmin.connects(0)
+    joe.connects(1)
+    # WHEN
+    superadmin.says('!makeroom')
+    time.sleep(.3)
+    superadmin.says('!makeroom')
+    # THEN
+    assert ['Joe was kicked to free a slot. A member has 5s to join the server',
+            'There is already a makeroom request in progress. Try again later in 4s'] == superadmin.message_history

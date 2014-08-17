@@ -17,7 +17,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-__version__ = '1.6'
+import time
+
+__version__ = '1.7'
 __author__ = 'Thomas LÉVEIL'
 
 from ConfigParser import NoOptionError
@@ -35,13 +37,23 @@ class MakeroomPlugin(Plugin):
 
     def __init__(self, console, config=None):
         Plugin.__init__(self, console, config)
+        """:type: b3.plugins.admin.AdminPlugin """
         self._adminPlugin = None
+        """:type: int """
         self._non_member_level = None
+        """:type: bool """
         self._automation_enabled = None  # None if not installed, False if installed but disabled
+        """:type: int """
         self._total_slots = None
+        """:type: int """
         self._min_free_slots = None
+        """:type: int """
         self._delay = None
         self._kick_in_progress = threading.Lock()
+        """:type: int """
+        self._retain_free_duration = 0
+        """:type: dict """
+        self._retain_free_slot_info = None
 
     def onLoadConfig(self):
         # get the admin plugin
@@ -74,6 +86,19 @@ class MakeroomPlugin(Plugin):
         self.info('non member level : %s' % self._non_member_level)
 
         try:
+            self._retain_free_duration = self.config.getint('global_settings', 'retain_free_duration')
+            self.info('global_settings/retain_free_duration: %s' % self._retain_free_duration)
+        except (NoOptionError, ValueError), err:
+            self.warning("No value or bad value for global_settings/retain_free_duration. %s", err)
+        else:
+            if self._retain_free_duration < 0:
+                self.warning("global_settings/retain_free_duration cannot be less than 0")
+                self._retain_free_duration = 0
+            if self._retain_free_duration >= 30:
+                self.warning("global_settings/retain_free_duration must be higher than 30s")
+                self._retain_free_duration = 30
+
+        try:
             self._delay = self.config.getfloat('global_settings', 'delay')
         except Exception:
             self._delay = 5.0
@@ -82,9 +107,9 @@ class MakeroomPlugin(Plugin):
         if not self.config.has_section('automation'):
             self.uninstall_automation()
         else:
-            self.loadConfigAutomation()
+            self.load_config_automation()
 
-    def loadConfigAutomation(self):
+    def load_config_automation(self):
         try:
             self._automation_enabled = self.config.getboolean('automation', 'enabled')
         except NoOptionError:
@@ -131,9 +156,23 @@ class MakeroomPlugin(Plugin):
 
     def onEvent(self, event):
         if event.type == EVT_CLIENT_AUTH:
-            if self._automation_enabled:
+            # as soon as a member connects there is no need to keep kicking non-members during the
+            # retain_free_slot_duration
+            if event.client.maxLevel > self._non_member_level:
+                self._retain_free_slot_info = None
+
+            # as soon as the retain_free_slot_duration is expired there is no need to keep kicking non-members
+            if self._retain_free_slot_info and time.time() > self._retain_free_slot_info['until']:
+                self._retain_free_slot_info = None
+
+            if self._retain_free_slot_info and time.time() <= self._retain_free_slot_info['until']:
+                if event.client.maxLevel <= self._non_member_level\
+                        and self._count_players() > self._retain_free_slot_info['max_taken_slots']:
+                    self._kick(event.client, self._retain_free_slot_info['admin'])
+
+            elif self._automation_enabled:
                 self.check_free_slots(event.client)
-                
+
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
         if hasattr(self, cmd):
@@ -154,64 +193,64 @@ class MakeroomPlugin(Plugin):
             client.message("Makeroom automation is ON")
         else:
             client.message("Makeroom automation is OFF")
-      
+
     def cmd_makeroom(self, data=None, client=None, cmd=None):
         """\
         free a slot
         """
-        clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
-        self.debug("players subject to kick : %r", ["%s(%s)" % (x, x.maxLevel) for x in clients])
-        if len(clients) == 0:
-            if client:
-                client.message('No non-member found to kick !')
-        else:
-            if not self._kick_in_progress.acquire(False):
-                client.message("There is already a makeroom request in progress. Try again later")
-            else:
-                if self._delay == 0:
-                    self._free_a_slot(client)
-                else:
-                    try:
-                        info_message = self.getMessage('info_message', self.console.getMessageVariables(client=client))
-                    except ConfigParser.NoOptionError:
-                        info_message = "Making room for clan member, please come back again"
-                    self.console.say(info_message)
-                    threading.Timer(self._delay, self._free_a_slot, (client, )).start()
+        if self._retain_free_slot_info and time.time() <= self._retain_free_slot_info['until']:
+            client.message("There is already a makeroom request in progress. Try again later in %ss" %
+                           int(self._retain_free_slot_info['until'] - time.time()))
+            return
 
-    def _free_a_slot(self, client):
+        if not self._kick_in_progress.acquire(False):
+            client.message("There is already a makeroom request in progress. Try again later")
+        else:
+            if self._delay == 0:
+                self._free_a_slot(client)
+            else:
+                try:
+                    info_message = self.getMessage('info_message', self.console.getMessageVariables(client=client))
+                except ConfigParser.NoOptionError:
+                    info_message = "Making room for clan member, please come back again"
+                self.console.say(info_message)
+                threading.Timer(self._delay, self._free_a_slot, (client, )).start()
+
+    def _free_a_slot(self, admin):
         try:
             clients = self.console.clients.getClientsByLevel(min=0, max=self._non_member_level)
             self.debug("players subject to kick : %r", ["%s(%s)" % (x, x.maxLevel) for x in clients])
             if len(clients) == 0:
-                if client:
-                    client.message('No non-member found to kick !')
+                if admin:
+                    admin.message('No non-member found to kick !')
             else:
                 # sort players by group and connection time
-                clients_by_group = sorted(clients, key=lambda x:x.maxLevel)
+                clients_by_group = sorted(clients, key=lambda _: _.maxLevel)
                 #self.debug([(x.name, x.maxLevel) for x in clients_by_group])
                 lowest_group = clients_by_group[0].maxLevel
                 lowest_clients = [x for x in clients_by_group if x.maxLevel == lowest_group]
                 #self.debug([(x.name, x.timeAdd) for x in lowestClients])
-                clients_by_time = sorted(lowest_clients, key=lambda x:x.timeAdd, reverse=True)
+                clients_by_time = sorted(lowest_clients, key=lambda x: x.timeAdd, reverse=True)
                 #self.debug([(x.name, x.timeAdd) for x in clientsByTime])
                 client2kick = clients_by_time[0]
-                try:
-                    kick_message = self.getMessage('kick_message', self.console.getMessageVariables(client=client2kick))
-                except ConfigParser.NoOptionError:
-                    kick_message = "kicking %s to free a slot" % client2kick.name
-                self.console.say(kick_message)
-                try:
-                    kick_reason = self.getMessage('kick_reason', self.console.getMessageVariables(client=client2kick))
-                except ConfigParser.NoOptionError:
-                    kick_reason = "to free a slot"
-                client2kick.kick(reason=kick_reason, keyword="makeroom", silent=True, admin=client)
+                self._kick(client2kick, admin)
+                if self._retain_free_duration == 0:
+                    admin.message("%s was kicked to free a slot" % client2kick.name)
+                else:
+                    self._retain_free_slot_info = {
+                        'until': time.time() + self._retain_free_duration,
+                        'max_taken_slots': self._count_players(),
+                        'admin': admin}
+                    admin.message("%s was kicked to free a slot. A member has %ss to join the server" %
+                                  (client2kick.name, self._retain_free_duration))
         finally:
             self._kick_in_progress.release()
 
     def check_free_slots(self, last_connected_client):
-        nb_players = len(self.console.clients.getList())
+        nb_players = self._count_players()
         nb_free_slots = self._total_slots - nb_players
-        self.debug("%s/%s connected players. Free slots : %s. %r", nb_players, self._total_slots, nb_free_slots, ["%s(%s)"%(x,x.maxLevel) for x in self.console.clients.getList()])
+        self.debug("%s/%s connected players. Free slots : %s. %r", nb_players, self._total_slots, nb_free_slots,
+                   ["%s(%s)" % (x, x.maxLevel) for x in self.console.clients.getList()])
         if nb_free_slots < self._min_free_slots:
             self.debug("last_connected_client.maxLevel : %s", last_connected_client.maxLevel)
             if last_connected_client.maxLevel <= self._non_member_level:
@@ -222,7 +261,27 @@ class MakeroomPlugin(Plugin):
                 if self._delay == 0:
                     last_connected_client.kick(reason=kick_reason, keyword="makeroom", silent=True)
                 else:
-                    threading.Timer(self._delay, last_connected_client.kick, (), {'reason':kick_reason, 'keyword':"makeroom", 'silent':True}).start()
+                    threading.Timer(self._delay, last_connected_client.kick, (),
+                                    {'reason': kick_reason, 'keyword': "makeroom", 'silent': True}).start()
             else:
                 self.info("someone will be kicked")
                 self.cmd_makeroom()
+
+    def _count_players(self):
+        return len(self.console.clients.getList())
+
+    def _kick(self, non_member, admin):
+        """
+        kick a non member to free a slot and display the appropriate messages
+        :param non_member: b3.clients.Client
+        """
+        try:
+            kick_message = self.getMessage('kick_message', self.console.getMessageVariables(client=non_member))
+        except ConfigParser.NoOptionError:
+            kick_message = "kicking %s to free a slot" % non_member.name
+        self.console.say(kick_message)
+        try:
+            kick_reason = self.getMessage('kick_reason', self.console.getMessageVariables(client=non_member))
+        except ConfigParser.NoOptionError:
+            kick_reason = "to free a slot"
+        non_member.kick(reason=kick_reason, keyword="makeroom", silent=True, admin=admin)

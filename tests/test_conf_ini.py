@@ -8,7 +8,7 @@ from tests import *
 def test_default_conf(console):
     plugin = plugin_maker(console,  DEFAULT_PLUGIN_CONFIG_FILE)
     assert 2 == plugin._non_member_level
-    assert 5.0 == plugin._delay
+    assert 2.0 == plugin._delay
     assert False is plugin._automation_enabled
     assert 32 is plugin._total_slots
     assert 1 is plugin._min_free_slots
@@ -142,3 +142,43 @@ def test_automation_total_slots_cannot_be_less_than_2(console):
         min_free_slots: 1
         """))
     assert None is plugin._automation_enabled
+
+
+def test_retain_free_duration(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        retain_free_duration: 20
+        """))
+    assert 20 == plugin._retain_free_duration
+
+
+def test_retain_free_duration_junk(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        retain_free_duration: f00
+        """))
+    assert 0 is plugin._retain_free_duration
+
+
+def test_retain_free_duration_negative(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        retain_free_duration: -5
+        """))
+    assert 0 is plugin._retain_free_duration
+
+
+def test_retain_free_duration_zero(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        retain_free_duration: 0
+        """))
+    assert 0 is plugin._retain_free_duration
+
+
+def test_retain_free_duration_too_high(console):
+    plugin = plugin_maker_ini(console, dedent("""
+        [global_settings]
+        retain_free_duration: 40
+        """))
+    assert 30 == plugin._retain_free_duration
