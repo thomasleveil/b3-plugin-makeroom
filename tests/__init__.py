@@ -92,8 +92,8 @@ def superadmin(console):
 @pytest.fixture
 def moderator(console):
     with logging_disabled():
-        from b3.fake import moderator
-    moderator.console = console
+        from b3.fake import FakeClient
+    moderator = FakeClient(console, name="Moderator", guid="moderator_guid", groupBits=8, team=TEAM_UNKNOWN)
     moderator.clearMessageHistory()
     return moderator
 
@@ -101,8 +101,8 @@ def moderator(console):
 @pytest.fixture
 def joe(console):
     with logging_disabled():
-        from b3.fake import joe
-    joe.console = console
+        from b3.fake import FakeClient
+    joe = FakeClient(console, name="Joe", guid="joe_guid", groupBits=1, team=TEAM_UNKNOWN)
     joe.clearMessageHistory()
     return joe
 
@@ -111,6 +111,6 @@ def joe(console):
 def jack(console):
     with logging_disabled():
         from b3.fake import FakeClient
-    jack = FakeClient(console, name="jack", guid="jack_guid", groupBits=1, team=TEAM_UNKNOWN)
+    jack = FakeClient(console, name="Jack", guid="jack_guid", groupBits=1, team=TEAM_UNKNOWN)
     jack.clearMessageHistory()
     return jack
