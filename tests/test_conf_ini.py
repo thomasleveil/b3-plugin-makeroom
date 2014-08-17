@@ -7,11 +7,28 @@ from tests import *
 @pytest.mark.skipif(not os.path.exists(DEFAULT_PLUGIN_CONFIG_FILE), reason="Could not find default plugin config file %r" % DEFAULT_PLUGIN_CONFIG_FILE)
 def test_default_conf(console):
     plugin = plugin_maker(console,  DEFAULT_PLUGIN_CONFIG_FILE)
+    # [global_settings]
     assert 2 == plugin._non_member_level
     assert 2.0 == plugin._delay
+    assert 15 == plugin._retain_free_duration
+    # [automation]
     assert False is plugin._automation_enabled
     assert 32 is plugin._total_slots
     assert 1 is plugin._min_free_slots
+    # [messages]
+    assert plugin.config.get('messages', 'kick_message') == 'kicking $clientname to free a slot'
+    assert plugin.config.get('messages', 'kick_reason') == 'to make room for a server member'
+    assert plugin.config.get('messages', 'info_message') == 'Making room for clan member, please come back again'
+    # [commands]
+    admin_plugin = console.getPlugin('admin')
+    assert 'makeroom' in admin_plugin._commands
+    assert admin_plugin._commands['makeroom'].level == (20, 100)
+    assert 'mkr' in admin_plugin._commands
+    assert admin_plugin._commands['mkr'].level == (20, 100)
+    assert 'makeroomauto' in admin_plugin._commands
+    assert admin_plugin._commands['makeroomauto'].level == (60, 100)
+    assert 'mrauto' in admin_plugin._commands
+    assert admin_plugin._commands['mrauto'].level == (60, 100)
 
 
 def test_empty_conf(console):
