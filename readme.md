@@ -3,7 +3,7 @@ makeroom plugin for BigBrotherBot [![BigBrotherBot](http://i.imgur.com/7sljo4G.p
 
 
 [![Build Status](https://travis-ci.org/thomasleveil/b3-plugin-makeroom.svg?branch=master)](https://travis-ci.org/thomasleveil/b3-plugin-makeroom)
-[![Coverage Status](https://coveralls.io/repos/thomasleveil/b3-plugin-makeroom/badge.png)](https://coveralls.io/r/thomasleveil/b3-plugin-makeroom)
+[![Coverage Status](https://coveralls.io/repos/thomasleveil/b3-plugin-makeroom/badge.png?branch=master)](https://coveralls.io/r/thomasleveil/b3-plugin-makeroom?branch=master)
 
 
 Description
