@@ -8,6 +8,9 @@ Description
 This plugin provides a command that will kick the player who last joined server from the lowest group.
 This command is useful on popular servers which need to make room for member players.
 
+******
+*NOTE: since B3 v1.10.1 beta this plugin has been included in the standard plugins set, thus all patches and updates will be performed in the official B3 repository.*
+******
 
 Commands
 --------
